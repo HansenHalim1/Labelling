@@ -195,7 +195,7 @@ a {
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text);
   background: #fff;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -218,6 +218,7 @@ a {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 4px;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -287,7 +288,7 @@ a {
 
 @media (max-width: 700px) {
   .main-content {
-    padding: 88px 16px 48px;
+    padding: 140px 16px 48px;
   }
 
   .nav-inner {
@@ -337,5 +338,24 @@ a {
   .card-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .card {
+    padding: 16px 14px;
+  }
+
+  .field-input,
+  .field-textarea {
+    font-size: 16px;
+  }
+
+  .card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    width: 100%;
+    text-align: center;
   }
 }
