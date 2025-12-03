@@ -7,6 +7,7 @@ import { useSaveAllContext } from "./SaveAllContext";
 const links = [
   { href: "/not-completed", label: "Not Completed" },
   { href: "/completed", label: "Completed" },
+  { href: "/deleted", label: "Deleted" },
 ];
 
 export default function Navbar() {

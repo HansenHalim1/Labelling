@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import supabase from "../lib/supabaseClient";
 import { useSaveAllController } from "./SaveAllContext";
 
-export default function ItemList({ completed = false }) {
+export default function ItemList({ completed = false, deleted = false }) {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,11 @@ export default function ItemList({ completed = false }) {
         let query = supabase
           .from("abbreviations")
           .select("*")
-          .eq("completed", completed);
+          .eq("deleted", deleted);
+
+        if (typeof completed === "boolean" && !deleted) {
+          query = query.eq("completed", completed);
+        }
 
         if (searchTerm) {
           query = query.or(
@@ -33,7 +37,10 @@ export default function ItemList({ completed = false }) {
           );
         }
 
-        query = query.order("created_at", { ascending: true }).limit(500);
+        query = query
+          .order("updated_at", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .limit(500);
 
         const { data, error } = await query;
         if (error) {
@@ -65,7 +72,7 @@ export default function ItemList({ completed = false }) {
     return () => {
       isMounted = false;
     };
-  }, [completed, search]);
+  }, [completed, deleted, search]);
 
   const handleFieldChange = (id, field, value) => {
     setItems((prev) =>
@@ -78,6 +85,7 @@ export default function ItemList({ completed = false }) {
   const handleSaveAll = useCallback(async () => {
     if (items.length === 0) return;
     setSavingAll(true);
+    const timestamp = new Date().toISOString();
     try {
       await Promise.all(
         items.map(async (item) => {
@@ -87,6 +95,7 @@ export default function ItemList({ completed = false }) {
               abbreviation: item.abbreviation,
               long_form: item.long_form,
               sentence: item.sentence,
+              updated_at: timestamp,
             })
             .eq("id", item.id);
 
@@ -107,6 +116,7 @@ export default function ItemList({ completed = false }) {
     if (!current) return;
 
     setSavingId(id);
+    const timestamp = new Date().toISOString();
     try {
       const { error } = await supabase
         .from("abbreviations")
@@ -114,6 +124,7 @@ export default function ItemList({ completed = false }) {
           abbreviation: current.abbreviation,
           long_form: current.long_form,
           sentence: current.sentence,
+          updated_at: timestamp,
         })
         .eq("id", id);
 
@@ -132,12 +143,13 @@ export default function ItemList({ completed = false }) {
     if (!current) return;
 
     setTogglingId(id);
-    const nextCompleted = !completed;
+    const nextCompleted = !current.completed;
 
+    const timestamp = new Date().toISOString();
     try {
       const { error } = await supabase
         .from("abbreviations")
-        .update({ completed: nextCompleted })
+        .update({ completed: nextCompleted, updated_at: timestamp })
         .eq("id", id);
 
       if (error) {
@@ -152,8 +164,58 @@ export default function ItemList({ completed = false }) {
     }
   };
 
-  const title = completed ? "Completed" : "Not Completed";
-  const subtitle = completed
+  const handleMoveToDeleted = async (id) => {
+    const current = items.find((item) => item.id === id);
+    if (!current) return;
+
+    setTogglingId(id);
+    const timestamp = new Date().toISOString();
+    try {
+      const { error } = await supabase
+        .from("abbreviations")
+        .update({ deleted: true, updated_at: timestamp })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error moving to deleted:", error);
+      } else {
+        setItems((prev) => prev.filter((item) => item.id !== id));
+      }
+    } catch (err) {
+      console.error("Unexpected delete move error:", err);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleRestore = async (id) => {
+    const current = items.find((item) => item.id === id);
+    if (!current) return;
+
+    setTogglingId(id);
+    const timestamp = new Date().toISOString();
+    try {
+      const { error } = await supabase
+        .from("abbreviations")
+        .update({ deleted: false, completed: false, updated_at: timestamp })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error restoring item:", error);
+      } else {
+        setItems((prev) => prev.filter((item) => item.id !== id));
+      }
+    } catch (err) {
+      console.error("Unexpected restore error:", err);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const title = deleted ? "Deleted" : completed ? "Completed" : "Not Completed";
+  const subtitle = deleted
+    ? "Entries moved out of the active workflow."
+    : completed
     ? "Reviewed entries marked as completed."
     : "Entries that still need review.";
   const countLabel = `${items.length} ${items.length === 1 ? "item" : "items"}`;
@@ -211,7 +273,11 @@ export default function ItemList({ completed = false }) {
             <div className="card-header">
               <div className="card-title">{item.abbreviation || "Untitled"}</div>
               <span className="badge">
-                {completed ? "Completed" : "Not completed"}
+                {deleted
+                  ? "Deleted"
+                  : item.completed
+                  ? "Completed"
+                  : "Not completed"}
               </span>
             </div>
 
@@ -255,17 +321,36 @@ export default function ItemList({ completed = false }) {
             />
 
             <div className="card-actions">
-              <button
-                className="btn btn-secondary"
-                disabled={toggling || savingAll}
-                onClick={() => handleToggleCompleted(item.id)}
-              >
-                {toggling
-                  ? "Updating..."
-                  : completed
-                  ? "Mark as not completed"
-                  : "Mark as completed"}
-              </button>
+              {deleted ? (
+                <button
+                  className="btn btn-secondary"
+                  disabled={toggling || savingAll}
+                  onClick={() => handleRestore(item.id)}
+                >
+                  {toggling ? "Restoring..." : "Restore to list"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-secondary"
+                    disabled={toggling || savingAll}
+                    onClick={() => handleToggleCompleted(item.id)}
+                  >
+                    {toggling
+                      ? "Updating..."
+                      : item.completed
+                      ? "Mark as not completed"
+                      : "Mark as completed"}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    disabled={toggling || savingAll}
+                    onClick={() => handleMoveToDeleted(item.id)}
+                  >
+                    {toggling ? "Moving..." : "Move to deleted"}
+                  </button>
+                </>
+              )}
               <button
                 className="btn btn-primary"
                 disabled={saving || savingAll}
