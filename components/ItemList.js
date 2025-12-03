@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import supabase from "../lib/supabaseClient";
 import { useSaveAllController } from "./SaveAllContext";
 
@@ -75,7 +75,7 @@ export default function ItemList({ completed = false }) {
     );
   };
 
-  const handleSaveAll = async () => {
+  const handleSaveAll = useCallback(async () => {
     if (items.length === 0) return;
     setSavingAll(true);
     try {
@@ -100,7 +100,7 @@ export default function ItemList({ completed = false }) {
     } finally {
       setSavingAll(false);
     }
-  };
+  }, [items]);
 
   const handleSave = async (id) => {
     const current = items.find((item) => item.id === id);

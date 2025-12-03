@@ -292,6 +292,32 @@ a {
 
   .nav-inner {
     padding: 14px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .nav-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .nav-links {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .nav-link {
+    width: auto;
+    flex: 1;
+    text-align: center;
+  }
+
+  .nav-save-btn {
+    width: 100%;
   }
 
   .list-header {
