@@ -11,6 +11,7 @@ export default function ItemList({ completed = false, deleted = false }) {
   const [savingId, setSavingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
   const [savingAll, setSavingAll] = useState(false);
+  const [movingAll, setMovingAll] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { register } = useSaveAllController();
 
@@ -235,6 +236,29 @@ export default function ItemList({ completed = false, deleted = false }) {
       });
   }, [register, handleSaveAll, savingAll, loading, items.length]);
 
+  const handleMoveAllToCompleted = async () => {
+    if (items.length === 0) return;
+    setMovingAll(true);
+    const timestamp = new Date().toISOString();
+    try {
+      const ids = items.map((item) => item.id);
+      const { error } = await supabase
+        .from("abbreviations")
+        .update({ completed: true, updated_at: timestamp })
+        .in("id", ids);
+
+      if (error) {
+        console.error("Error moving all to completed:", error);
+      } else {
+        setItems([]);
+      }
+    } catch (err) {
+      console.error("Unexpected move all error:", err);
+    } finally {
+      setMovingAll(false);
+    }
+  };
+
   return (
     <div className="list-wrapper">
       <div className="list-header">
@@ -362,6 +386,18 @@ export default function ItemList({ completed = false, deleted = false }) {
           </div>
         );
       })}
+
+      {!deleted && !completed && items.length > 0 && (
+        <div className="bottom-actions">
+          <button
+            className="btn btn-primary"
+            disabled={movingAll}
+            onClick={handleMoveAllToCompleted}
+          >
+            {movingAll ? "Moving all..." : "Move all to completed"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

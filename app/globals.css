@@ -263,6 +263,12 @@ a {
   margin: 0 0 8px 0;
 }
 
+.bottom-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
 .error-text {
   color: #b42318;
   font-size: 14px;
@@ -357,5 +363,9 @@ a {
   .btn {
     width: 100%;
     text-align: center;
+  }
+
+  .bottom-actions {
+    justify-content: stretch;
   }
 }
